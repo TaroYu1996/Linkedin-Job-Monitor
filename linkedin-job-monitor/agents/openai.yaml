@@ -1,5 +1,4 @@
-version: 1
 interface:
-  display_name: LinkedIn Job Monitor
-  short_description: Profile-driven LinkedIn job monitoring and digest generation.
-  default_prompt: Run the linkedin-job-monitor workflow using my saved profile and return a brief digest.
+  display_name: "LinkedIn Job Monitor"
+  short_description: "Filter, rank, and deduplicate LinkedIn jobs"
+  default_prompt: "Use $linkedin-job-monitor to run my saved job-search profile and return a concise digest of new or updated matches."

@@ -1,6 +1,6 @@
-# Linkin-Job-Seeker
+# LinkedIn Job Monitor
 
-`Linkin-Job-Seeker` is a reusable OpenClaw/QClaw skill workspace for monitoring LinkedIn job search results with a **profile-driven** pipeline.
+`LinkedIn Job Monitor` is a reusable Codex skill for monitoring LinkedIn job search results with a **profile-driven** pipeline.
 
 The main skill is:
 
@@ -47,7 +47,7 @@ linkedin-job-monitor/
 
 ### 1) Prepare a profile
 
-Use `scripts/config_schema.py` + `scripts/collect_profile.py` to build or update a profile object:
+Import `scripts/config_schema.py` and `scripts/collect_profile.py` to build or update a profile object. The scripts are Python modules rather than standalone command-line programs.
 
 - Required:
   - `search_url`
@@ -94,6 +94,7 @@ You can run basic script validation with:
 
 ```bash
 python -m compileall linkedin-job-monitor/scripts
+python /opt/codex/skills/.system/skill-creator/scripts/quick_validate.py linkedin-job-monitor
 ```
 
 ---
