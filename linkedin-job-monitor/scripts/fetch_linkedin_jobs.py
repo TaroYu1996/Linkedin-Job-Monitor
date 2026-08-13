@@ -36,7 +36,12 @@ class LinkedInSessionAdapter(Protocol):
     def extract_attr(self, selector: str, attr: str) -> str | None: ...
 
 
-def fetch_linkedin_jobs(search_url: str, session: LinkedInSessionAdapter, max_cards: int = 100) -> list[RawLinkedInJob]:
+def fetch_linkedin_jobs(
+    search_url: str,
+    session: LinkedInSessionAdapter,
+    max_cards: int = 100,
+    check_detailed_jd: bool = True,
+) -> list[RawLinkedInJob]:
     """Fetch job cards and corresponding job details from LinkedIn search results.
 
     TODO: supply a concrete `LinkedInSessionAdapter` for the host runtime (Playwright,
@@ -56,7 +61,9 @@ def fetch_linkedin_jobs(search_url: str, session: LinkedInSessionAdapter, max_ca
         posted_at_text = session.extract_visible_text(".job-details-jobs-unified-top-card__primary-description")
         job_url = session.extract_attr("a.job-details-jobs-unified-top-card__job-title-link", "href") or ""
         job_id = session.extract_attr(".jobs-unified-top-card", "data-job-id")
-        jd_text = session.extract_visible_text(".jobs-description-content__text") or ""
+        jd_text = ""
+        if check_detailed_jd:
+            jd_text = session.extract_visible_text(".jobs-description-content__text") or ""
 
         if not (title and company and job_url):
             continue

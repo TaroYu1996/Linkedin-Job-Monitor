@@ -38,6 +38,8 @@ Use this template when a user has no saved profile and wants to set up `linkedin
 
 - minimum_salary_cad:
 - salary_required: （true/false）
+- check_detailed_jd: （是否检查详细 JD，true/false；默认 true）
+- output_mode: （仅完全符合：matches_only；包含部分符合：include_partial_matches）
 - seniority:
 - title_include_keywords:
 - title_exclude_keywords:
@@ -122,6 +124,8 @@ For better precision, you can optionally provide:
 
 - minimum_salary_cad:
 - salary_required: (true/false)
+- check_detailed_jd: (inspect detailed JD text; true/false, default true)
+- output_mode: (`matches_only` or `include_partial_matches`)
 - seniority:
 - title_include_keywords:
 - title_exclude_keywords:

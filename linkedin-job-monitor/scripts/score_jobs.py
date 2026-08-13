@@ -13,6 +13,8 @@ class ScoredJob:
     score: float
     reasons: list[str]
     dedupe_status: str
+    match_status: str = "match"
+    mismatch_reasons: list[str] | None = None
 
 
 def _count_hits(text: str, keywords: list[str]) -> int:
@@ -39,10 +41,11 @@ def score_jobs(jobs_with_status: list[tuple[NormalizedJob, str]], profile: dict)
             score += title_hits * 2.0
             reasons.append(f"title_hits:{title_hits}")
 
-        jd_hits = _count_hits(jd, profile.get("jd_include_keywords", []))
-        if jd_hits:
-            score += jd_hits * 1.5
-            reasons.append(f"jd_hits:{jd_hits}")
+        if profile.get("check_detailed_jd", True):
+            jd_hits = _count_hits(jd, profile.get("jd_include_keywords", []))
+            if jd_hits:
+                score += jd_hits * 1.5
+                reasons.append(f"jd_hits:{jd_hits}")
 
         if job.location_type in set(profile.get("allowed_location_types", [])):
             score += 1.0

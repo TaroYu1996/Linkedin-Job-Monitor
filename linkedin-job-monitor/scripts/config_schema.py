@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 LOCATION_TYPES = {"remote", "hybrid", "onsite", "unknown"}
+OUTPUT_MODES = {"matches_only", "include_partial_matches"}
 SENIORITY_LEVELS = {
     "intern",
     "entry",
@@ -46,6 +47,8 @@ DEFAULT_PROFILE: dict[str, Any] = {
     "allowed_location_types": ["remote", "hybrid", "onsite", "unknown"],
     "minimum_salary_cad": None,
     "salary_required": False,
+    "check_detailed_jd": True,
+    "output_mode": "matches_only",
     "seniority": [],
     "title_include_keywords": [],
     "title_exclude_keywords": [],
@@ -66,6 +69,8 @@ EXAMPLE_PROFILE_CANADA_ANALYTICS: dict[str, Any] = {
     "allowed_location_types": ["remote", "hybrid", "onsite"],
     "minimum_salary_cad": 85000,
     "salary_required": False,
+    "check_detailed_jd": True,
+    "output_mode": "include_partial_matches",
     "seniority": ["entry", "associate", "mid", "senior"],
     "title_include_keywords": [
         "analytics",
@@ -178,9 +183,14 @@ def validate_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
         if not isinstance(min_salary, int) or min_salary < 0:
             raise ProfileValidationError("minimum_salary_cad must be a non-negative integer or null")
 
-    for field_name in ["salary_required"]:
+    for field_name in ["salary_required", "check_detailed_jd"]:
         if not isinstance(data.get(field_name), bool):
             raise ProfileValidationError(f"{field_name} must be a boolean")
+
+    if data.get("output_mode") not in OUTPUT_MODES:
+        raise ProfileValidationError(
+            "output_mode must be 'matches_only' or 'include_partial_matches'"
+        )
 
     for numeric_field in ["max_results_per_digest", "dedupe_window_days", "runs_per_day"]:
         value = data.get(numeric_field)
