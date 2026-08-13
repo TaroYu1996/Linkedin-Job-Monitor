@@ -7,8 +7,9 @@ from run_monitor import run_monitor
 
 
 class FakeSession:
-    def __init__(self) -> None:
+    def __init__(self, card_metadata: dict | None = None) -> None:
         self.jd_reads = 0
+        self.card_metadata = card_metadata
 
     def goto(self, url: str) -> None:
         pass
@@ -18,6 +19,9 @@ class FakeSession:
 
     def open_job_card(self, card: object) -> None:
         pass
+
+    def extract_job_card_metadata(self, card: object) -> dict:
+        return self.card_metadata or {}
 
     def extract_visible_text(self, selector: str) -> str | None:
         if selector == ".jobs-description-content__text":
@@ -83,6 +87,30 @@ class MonitorOptionsTest(unittest.TestCase):
     def test_output_mode_is_validated(self) -> None:
         with self.assertRaises(ProfileValidationError):
             make_profile(output_mode="everything")
+
+    def test_digest_includes_result_card_activity(self) -> None:
+        session = FakeSession(
+            {
+                "posted_at_text": "2 days ago",
+                "is_reposted": True,
+                "apply_click_count_text": "100+ people clicked apply",
+            }
+        )
+        digest, _ = run_monitor(
+            make_profile(check_detailed_jd=False), {}, session
+        )
+
+        self.assertIn("2 days ago | reposted | 100+ clicked apply", digest)
+
+    def test_missing_activity_is_reported_without_guessing(self) -> None:
+        digest, _ = run_monitor(
+            make_profile(check_detailed_jd=False), {}, FakeSession()
+        )
+
+        self.assertIn(
+            "posting age unknown | repost status unknown | apply clicks unavailable",
+            digest,
+        )
 
 
 if __name__ == "__main__":

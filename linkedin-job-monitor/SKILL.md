@@ -18,7 +18,7 @@ Run a LinkedIn job search as a deterministic pipeline. Keep credentials and brow
    - Set `output_mode` to `matches_only` for fully qualified jobs only, or `include_partial_matches` to include clearly labeled partial matches and their mismatch reasons.
 6. Provide a runtime-owned authenticated session implementing `LinkedInSessionAdapter`, then call `run_monitor(profile, dedupe_state, session)`. The orchestrator performs fetch, normalize, hard-filter, deduplicate, score, and summarize in that order.
 7. Persist the returned dedupe state under the same user and search context. Never persist cookies, tokens, or credentials in the profile or dedupe state.
-8. Return the digest without inventing missing jobs, salary data, match reasons, or successful scheduling. Always rank full matches before partial matches.
+8. Return the digest without inventing missing jobs, salary data, posting age, apply-click activity, match reasons, or successful scheduling. Always rank full matches before partial matches. Distinguish reposted jobs from original posts and include the displayed posting age and “clicked apply” count when the result card exposes them.
 
 ## Use the scripts
 
@@ -55,3 +55,4 @@ Use the narrowest module needed when diagnosing a pipeline stage:
 - Ask the user to authenticate through the host runtime; never request passwords, cookies, or tokens in chat.
 - Respect LinkedIn terms, applicable law, rate limits, and organizational policy. Stop rather than bypass access controls or anti-bot challenges.
 - If no adapter is available, validate or update the profile and clearly report that live collection was not run.
+- Prefer the adapter's optional `extract_job_card_metadata(card)` hook for `posted_at_text`, `is_reposted`, and `apply_click_count_text`; these values are displayed activity signals, not verified application totals.

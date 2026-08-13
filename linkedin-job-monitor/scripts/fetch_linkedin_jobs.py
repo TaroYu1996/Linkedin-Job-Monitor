@@ -6,7 +6,7 @@ This module intentionally focuses on collection only. Filtering/ranking belong t
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Mapping, Protocol
 
 
 @dataclass
@@ -20,6 +20,8 @@ class RawLinkedInJob:
     job_url: str
     job_id: str | None
     jd_text: str
+    is_reposted: bool | None = None
+    apply_click_count_text: str | None = None
 
 
 class LinkedInSessionAdapter(Protocol):
@@ -34,6 +36,10 @@ class LinkedInSessionAdapter(Protocol):
     def extract_visible_text(self, selector: str) -> str | None: ...
 
     def extract_attr(self, selector: str, attr: str) -> str | None: ...
+
+    # Optional: return metadata visible on the result card before it is opened.
+    # Supported keys are posted_at_text, is_reposted, and apply_click_count_text.
+    def extract_job_card_metadata(self, card: Any) -> Mapping[str, Any]: ...
 
 
 def fetch_linkedin_jobs(
@@ -52,13 +58,20 @@ def fetch_linkedin_jobs(
     jobs: list[RawLinkedInJob] = []
 
     for card in cards[:max_cards]:
+        card_metadata: Mapping[str, Any] = {}
+        extract_card_metadata = getattr(session, "extract_job_card_metadata", None)
+        if callable(extract_card_metadata):
+            card_metadata = extract_card_metadata(card) or {}
         session.open_job_card(card)
         title = session.extract_visible_text(".job-details-jobs-unified-top-card__job-title") or ""
         company = session.extract_visible_text(".job-details-jobs-unified-top-card__company-name") or ""
         location_text = session.extract_visible_text(".job-details-jobs-unified-top-card__bullet") or ""
         work_mode_text = session.extract_visible_text(".jobs-unified-top-card__workplace-type")
         salary_text = session.extract_visible_text(".job-details-jobs-unified-top-card__job-insight")
-        posted_at_text = session.extract_visible_text(".job-details-jobs-unified-top-card__primary-description")
+        detail_metadata_text = session.extract_visible_text(
+            ".job-details-jobs-unified-top-card__primary-description"
+        )
+        posted_at_text = card_metadata.get("posted_at_text") or detail_metadata_text
         job_url = session.extract_attr("a.job-details-jobs-unified-top-card__job-title-link", "href") or ""
         job_id = session.extract_attr(".jobs-unified-top-card", "data-job-id")
         jd_text = ""
@@ -79,6 +92,12 @@ def fetch_linkedin_jobs(
                 job_url=job_url.strip(),
                 job_id=(job_id or "").strip() or None,
                 jd_text=jd_text.strip(),
+                is_reposted=card_metadata.get("is_reposted"),
+                apply_click_count_text=(
+                    str(card_metadata["apply_click_count_text"]).strip()
+                    if card_metadata.get("apply_click_count_text") is not None
+                    else None
+                ),
             )
         )
 

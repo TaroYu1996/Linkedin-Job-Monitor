@@ -28,9 +28,13 @@ class NormalizedJob:
     posted_at_text: str | None
     seniority_hint: str | None
     jd_text: str
+    is_reposted: bool | None
+    apply_click_count: int | None
+    apply_click_count_is_lower_bound: bool
 
 
 _ANNUAL_HINTS = ("year", "yr", "annual", "annually")
+_REPOST_MARKERS = ("reposted", "重新发布", "再次发布")
 
 
 def _clean_text(text: str) -> str:
@@ -83,6 +87,25 @@ def _build_fallback_id(title: str, company: str, location: str) -> str:
     return hashlib.sha1(seed.encode("utf-8")).hexdigest()[:16]
 
 
+def _parse_card_activity(raw: RawLinkedInJob) -> tuple[bool | None, int | None, bool]:
+    metadata = " ".join(
+        text for text in (raw.posted_at_text, raw.apply_click_count_text) if text
+    ).lower()
+    is_reposted = raw.is_reposted
+    if is_reposted is None and any(marker in metadata for marker in _REPOST_MARKERS):
+        is_reposted = True
+
+    # LinkedIn commonly renders phrases such as "37 people clicked apply" and
+    # "100+ applicants". Keep the plus sign as an explicit lower-bound flag.
+    count_match = re.search(
+        r"(\d[\d,]*)\s*(\+)?\s*(?:people\s+clicked\s+apply|applicants?|人(?:点击了)?申请)",
+        metadata,
+    )
+    if not count_match:
+        return is_reposted, None, False
+    return is_reposted, int(count_match.group(1).replace(",", "")), bool(count_match.group(2))
+
+
 def normalize_jobs(raw_jobs: list[RawLinkedInJob], profile_regions: list[str]) -> list[NormalizedJob]:
     normalized: list[NormalizedJob] = []
     for raw in raw_jobs:
@@ -93,6 +116,7 @@ def normalize_jobs(raw_jobs: list[RawLinkedInJob], profile_regions: list[str]) -
         region = _normalize_region(location_text, profile_regions)
         location_type = _derive_location_type(raw)
         fallback_id = _build_fallback_id(title, company, location_text)
+        is_reposted, apply_click_count, count_is_lower_bound = _parse_card_activity(raw)
 
         normalized.append(
             NormalizedJob(
@@ -111,6 +135,9 @@ def normalize_jobs(raw_jobs: list[RawLinkedInJob], profile_regions: list[str]) -
                 posted_at_text=raw.posted_at_text,
                 seniority_hint=None,
                 jd_text=_clean_text(raw.jd_text),
+                is_reposted=is_reposted,
+                apply_click_count=apply_click_count,
+                apply_click_count_is_lower_bound=count_is_lower_bound,
             )
         )
 

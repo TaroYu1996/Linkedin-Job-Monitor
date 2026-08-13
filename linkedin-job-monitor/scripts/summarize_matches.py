@@ -14,6 +14,21 @@ def _salary_line(job: ScoredJob) -> str:
     return f"CAD {j.salary_min_cad:,}"
 
 
+def _activity_line(job: ScoredJob) -> str:
+    j = job.job
+    posting = j.posted_at_text or "posting age unknown"
+    if j.is_reposted is None:
+        repost = "repost status unknown"
+    else:
+        repost = "reposted" if j.is_reposted else "original post"
+    if j.apply_click_count is None:
+        apply_activity = "apply clicks unavailable"
+    else:
+        suffix = "+" if j.apply_click_count_is_lower_bound else ""
+        apply_activity = f"{j.apply_click_count:,}{suffix} clicked apply"
+    return f"{posting} | {repost} | {apply_activity}"
+
+
 def summarize_matches(
     scored_jobs: list[ScoredJob],
     fetched_count: int,
@@ -39,6 +54,7 @@ def summarize_matches(
             [
                 f"{idx}. [{match_label}] {job.title} — {job.company}",
                 f"   {job.location_text} | {job.location_type} | {_salary_line(scored)}",
+                f"   {_activity_line(scored)}",
                 f"   Why matched: {reason} | score={scored.score} | status={scored.dedupe_status}",
                 f"   Link: {job.job_url}",
             ]

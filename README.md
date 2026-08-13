@@ -13,6 +13,7 @@ It supports:
 - deduplication against prior runs
 - ranking/scoring by profile preferences
 - concise internal chat digest output
+- posting age, repost status, and displayed apply-click activity when available on result cards
 
 ---
 
