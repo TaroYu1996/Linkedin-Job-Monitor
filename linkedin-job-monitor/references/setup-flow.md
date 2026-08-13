@@ -14,6 +14,8 @@ Collect a reusable profile for recurring LinkedIn job monitoring and allow parti
 3. Gather optional fields (salary, keyword filters, company controls, scheduling), including:
    - Whether to inspect detailed JD text (`check_detailed_jd`, default `true`).
    - Whether the digest should contain only full matches or also partial matches (`output_mode`, default `matches_only`).
+   - Custom region aliases/fuzzy threshold and how unknown locations should be handled.
+   - Hourly annualization assumptions, expiration threshold, run-history limit, and feedback-learning preference.
 4. Validate and normalize profile via `scripts/config_schema.py`.
 5. Persist profile.
 6. Run monitor once and return digest.

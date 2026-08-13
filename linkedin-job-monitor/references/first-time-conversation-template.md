@@ -38,6 +38,11 @@ Use this template when a user has no saved profile and wants to set up `linkedin
 
 - minimum_salary_cad:
 - salary_required: （true/false）
+- salary_hours_per_week: （默认 40）
+- salary_weeks_per_year: （默认 52）
+- region_aliases: （可选，自定义地区及其城市/别名）
+- region_fuzzy_threshold: （默认 0.86）
+- unknown_region_policy: （reject/include）
 - check_detailed_jd: （是否检查详细 JD，true/false；默认 true）
 - output_mode: （仅完全符合：matches_only；包含部分符合：include_partial_matches）
 - seniority:
@@ -50,6 +55,10 @@ Use this template when a user has no saved profile and wants to set up `linkedin
 - company_whitelist:
 - max_results_per_digest:
 - dedupe_window_days:
+- expire_after_missing_runs:
+- run_history_limit:
+- feedback_learning_enabled: （true/false）
+- feedback_score_weight: （0–5，默认 1）
 - runs_per_day:
 
 ---
@@ -124,6 +133,11 @@ For better precision, you can optionally provide:
 
 - minimum_salary_cad:
 - salary_required: (true/false)
+- salary_hours_per_week: (default 40)
+- salary_weeks_per_year: (default 52)
+- region_aliases: (optional region-to-city/alias mapping)
+- region_fuzzy_threshold: (default 0.86)
+- unknown_region_policy: (`reject` or `include`)
 - check_detailed_jd: (inspect detailed JD text; true/false, default true)
 - output_mode: (`matches_only` or `include_partial_matches`)
 - seniority:
@@ -136,6 +150,10 @@ For better precision, you can optionally provide:
 - company_whitelist:
 - max_results_per_digest:
 - dedupe_window_days:
+- expire_after_missing_runs:
+- run_history_limit:
+- feedback_learning_enabled: (true/false)
+- feedback_score_weight: (0–5, default 1)
 - runs_per_day:
 
 ---

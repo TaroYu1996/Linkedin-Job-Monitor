@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from feedback_learning import feedback_adjustment
 from normalize_jobs import NormalizedJob
 
 
@@ -15,6 +16,8 @@ class ScoredJob:
     dedupe_status: str
     match_status: str = "match"
     mismatch_reasons: list[str] | None = None
+    lifecycle_status: str = "active"
+    user_status: str | None = None
 
 
 def _count_hits(text: str, keywords: list[str]) -> int:
@@ -22,8 +25,14 @@ def _count_hits(text: str, keywords: list[str]) -> int:
     return sum(1 for kw in keywords if kw in lowered)
 
 
-def score_jobs(jobs_with_status: list[tuple[NormalizedJob, str]], profile: dict) -> list[ScoredJob]:
+def score_jobs(
+    jobs_with_status: list[tuple[NormalizedJob, str]],
+    profile: dict,
+    feedback_state: dict | None = None,
+) -> list[ScoredJob]:
     scored: list[ScoredJob] = []
+    allowed_location_types = set(profile.get("allowed_location_types", []))
+    seniority_filters = set(profile.get("seniority", []))
 
     for job, dedupe_status in jobs_with_status:
         title = job.title.lower()
@@ -47,9 +56,13 @@ def score_jobs(jobs_with_status: list[tuple[NormalizedJob, str]], profile: dict)
                 score += jd_hits * 1.5
                 reasons.append(f"jd_hits:{jd_hits}")
 
-        if job.location_type in set(profile.get("allowed_location_types", [])):
+        if job.location_type in allowed_location_types:
             score += 1.0
             reasons.append("location_type_fit")
+
+        if seniority_filters and job.seniority_hint in seniority_filters:
+            score += 1.0
+            reasons.append("seniority_fit")
 
         min_salary = profile.get("minimum_salary_cad")
         if min_salary is not None and job.salary_min_cad is not None:
@@ -59,9 +72,15 @@ def score_jobs(jobs_with_status: list[tuple[NormalizedJob, str]], profile: dict)
                 score += bonus
                 reasons.append("salary_above_min")
 
-        if dedupe_status == "updated":
+        if dedupe_status in {"updated", "reactivated"}:
             score += 0.25
-            reasons.append("job_updated")
+            reasons.append(f"job_{dedupe_status}")
+
+        if profile.get("feedback_learning_enabled", True):
+            learned_score, learned_reasons = feedback_adjustment(job, feedback_state)
+            weighted_adjustment = learned_score * float(profile.get("feedback_score_weight", 1.0))
+            score += weighted_adjustment
+            reasons.extend(learned_reasons)
 
         scored.append(ScoredJob(job=job, score=round(score, 3), reasons=reasons, dedupe_status=dedupe_status))
 

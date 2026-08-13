@@ -14,6 +14,11 @@ It supports:
 - ranking/scoring by profile preferences
 - concise internal chat digest output
 - posting age, repost status, and displayed apply-click activity when available on result cards
+- hourly/monthly CAD salary annualization from cards or detailed JDs
+- Greater Toronto Area aliases plus configurable fuzzy region matching
+- Job ID-first deduplication and active/missing/expired lifecycle tracking
+- bounded learning from explicit user feedback
+- per-run funnel statistics and rejection-reason counts
 
 ---
 
@@ -29,6 +34,7 @@ linkedin-job-monitor/
     filter-schema.md
     scoring-rules.md
     dedupe-policy.md
+    job-state-and-feedback.md
     output-format.md
   scripts/
     config_schema.py
@@ -37,6 +43,7 @@ linkedin-job-monitor/
     normalize_jobs.py
     apply_filters.py
     dedupe_jobs.py
+    feedback_learning.py
     score_jobs.py
     summarize_matches.py
     run_monitor.py
@@ -68,6 +75,7 @@ Import `scripts/config_schema.py` and `scripts/collect_profile.py` to build or u
 
 `scripts/fetch_linkedin_jobs.py` defines `LinkedInSessionAdapter` protocol.  
 Plug in your runtime implementation (Playwright/Selenium/hosted browser session).
+Implement the optional `extract_job_details(...)` hook to return all fields in one host call and avoid repeated selector round trips.
 
 ### 3) Run the monitor pipeline
 
@@ -76,9 +84,11 @@ Call `run_monitor(...)` from `scripts/run_monitor.py`:
 1. fetch
 2. normalize
 3. filter
-4. dedupe
+4. lifecycle and dedupe
 5. score
 6. summarize
+
+The returned state includes `last_run_stats`, bounded `run_history`, lifecycle records, and the feedback model. Use `record_job_feedback(...)` or `record_feedback_by_key(...)` only for explicit user signals and `list_job_statuses(...)` to inspect current status.
 
 ---
 
@@ -96,9 +106,11 @@ Call `run_monitor(...)` from `scripts/run_monitor.py`:
 You can run basic script validation with:
 
 ```bash
-python -m compileall linkedin-job-monitor/scripts
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=linkedin-job-monitor/scripts python -m unittest discover -s linkedin-job-monitor/tests -v
 python /opt/codex/skills/.system/skill-creator/scripts/quick_validate.py linkedin-job-monitor
 ```
+
+The code supports Python 3.9–3.13 and uses only the standard library. GitHub Actions verifies every supported version.
 
 ---
 

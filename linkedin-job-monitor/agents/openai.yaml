@@ -1,4 +1,4 @@
 interface:
   display_name: "LinkedIn Job Monitor"
-  short_description: "Filter, rank, and deduplicate LinkedIn jobs"
-  default_prompt: "Use $linkedin-job-monitor to run my saved job-search profile and return a concise digest of new or updated matches."
+  short_description: "Monitor, learn from, and track LinkedIn jobs"
+  default_prompt: "Use $linkedin-job-monitor to run my saved profile and return a concise digest with job statuses and funnel statistics."
