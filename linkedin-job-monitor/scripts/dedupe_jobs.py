@@ -36,6 +36,7 @@ def dedupe_jobs(
     jobs: list[NormalizedJob],
     state: dict,
     dedupe_window_days: int,
+    key_namespaces: dict[str, str] | None = None,
 ) -> tuple[list[DedupeDecision], dict]:
     """Return dedupe decisions and updated state."""
     records = state.setdefault("records", {})
@@ -55,6 +56,9 @@ def dedupe_jobs(
 
     for job in jobs:
         key = _dedupe_key(job)
+        namespace = (key_namespaces or {}).get(job.job_key)
+        if namespace:
+            key = f"{namespace}::{key}"
         new_hash = _content_hash(job)
         existing = active_records.get(key)
         if existing is None:

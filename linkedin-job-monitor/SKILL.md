@@ -1,47 +1,58 @@
 ---
 name: linkedin-job-monitor
-description: Monitor LinkedIn jobs with a reusable, profile-driven workflow. Use when a user wants to set up or run recurring LinkedIn job discovery, update job criteria conversationally, deduplicate previously seen postings, rank matches, and produce a concise internal chat digest for OpenClaw/QClaw delivery.
+description: Set up and run profile-driven LinkedIn job monitoring, including conversational preference collection, authenticated result collection through a user-provided session adapter, deterministic filtering and ranking, seen-job deduplication, and concise chat digests. Use when Codex needs to create or update a job-search profile, process LinkedIn job results, run a recurring monitor, troubleshoot match results, or format a new-and-updated-jobs digest.
 ---
 
 # LinkedIn Job Monitor
 
-Use this skill to run an end-to-end LinkedIn job monitoring flow with reusable profile configuration and deterministic filtering/ranking.
+Run a LinkedIn job search as a deterministic pipeline. Keep credentials and browser state outside the skill directory.
 
 ## Workflow
 
-1. Determine profile state.
-   - If no profile exists, run conversational setup using `scripts/collect_profile.py` and validate with `scripts/config_schema.py`.
-   - If profile exists, run monitor immediately with `scripts/run_monitor.py`.
-   - If user requests updates, apply partial updates only to requested fields via `merge_profile_update`.
-2. Fetch jobs from the authenticated LinkedIn search URL using `scripts/fetch_linkedin_jobs.py`.
-3. Normalize scraped jobs with `scripts/normalize_jobs.py`.
-4. Apply strict profile-driven filters via `scripts/apply_filters.py`.
-5. Deduplicate against state with `scripts/dedupe_jobs.py`.
-6. Score and rank matches using `scripts/score_jobs.py`.
-7. Produce brief chat digest via `scripts/summarize_matches.py`.
+1. Inspect the available profile and runtime capabilities. Do not claim to fetch live jobs unless an authenticated `LinkedInSessionAdapter` is available.
+2. If the profile is missing, read [setup-flow.md](references/setup-flow.md) and collect only the four required fields first. Use [first-time-conversation-template.md](references/first-time-conversation-template.md) only when a ready-made Chinese or English prompt is useful.
+3. If the user requests changes, merge only explicitly supplied fields with `merge_profile_update`; preserve all other values.
+4. Validate the resulting mapping with `validate_profile` before fetching or saving it. Read [filter-schema.md](references/filter-schema.md) when interpreting fields or explaining a rejection.
+5. Confirm the two result-shaping preferences when relevant:
+   - Set `check_detailed_jd` to `true` to fetch and evaluate detailed JD text, or `false` to skip JD extraction, JD filters, and JD scoring.
+   - Set `output_mode` to `matches_only` for fully qualified jobs only, or `include_partial_matches` to include clearly labeled partial matches and their mismatch reasons.
+6. Provide a runtime-owned authenticated session implementing `LinkedInSessionAdapter`, then call `run_monitor(profile, dedupe_state, session)`. The orchestrator performs fetch, normalize, hard-filter, deduplicate, score, and summarize in that order.
+7. Persist the returned dedupe state under the same user and search context. Never persist cookies, tokens, or credentials in the profile or dedupe state.
+8. Return the digest without inventing missing jobs, salary data, posting age, apply-click activity, match reasons, or successful scheduling. Always rank full matches before partial matches. Distinguish reposted jobs from original posts and include the displayed posting age and “clicked apply” count when the result card exposes them.
 
-## Required inputs
+## Use the scripts
 
-- Authenticated LinkedIn browsing/session capability in the runtime.
-- Profile fields defined in `references/filter-schema.md`.
+The scripts are importable Python modules, not standalone command-line programs. Add `scripts/` to `PYTHONPATH` when importing from outside that directory:
 
-## State management guidance
+```python
+from collect_profile import merge_profile_update, parse_profile_input
+from run_monitor import run_monitor
 
-- Persist profile JSON per user/workspace.
-- Persist dedupe state JSON per profile/search context.
-- Keep `dedupe_window_days` and `runs_per_day` in profile for scheduler integration.
+profile = parse_profile_input(conversation_fields)
+digest, updated_state = run_monitor(profile, dedupe_state, session)
+```
 
-## Resource map
+Use the narrowest module needed when diagnosing a pipeline stage:
 
-- Setup guidance: `references/setup-flow.md`
-- First-time bilingual conversation template: `references/first-time-conversation-template.md`
-- Profile schema semantics: `references/filter-schema.md`
-- Ranking approach: `references/scoring-rules.md`
-- Dedupe behavior: `references/dedupe-policy.md`
-- Digest shape: `references/output-format.md`
+- `config_schema.py` and `collect_profile.py`: normalize, validate, or partially update profiles.
+- `fetch_linkedin_jobs.py`: define the host-specific authenticated browser adapter boundary.
+- `normalize_jobs.py` and `apply_filters.py`: inspect normalized fields and hard-filter rejection reasons.
+- `dedupe_jobs.py`: classify jobs as `new`, `seen`, or `updated`.
+- `score_jobs.py`: rank only jobs that passed hard filters.
+- `summarize_matches.py`: produce the final chat digest.
 
-## Execution notes
+## Load references as needed
 
-- Keep filtering and ranking configuration-driven; avoid role-specific hardcoding in scripts.
-- Keep digest concise for internal chat.
-- Leave LinkedIn browser/session adapter details in the fetch layer only.
+- Read [scoring-rules.md](references/scoring-rules.md) when tuning or explaining ranking.
+- Read [dedupe-policy.md](references/dedupe-policy.md) when changing retention or resend behavior.
+- Read [output-format.md](references/output-format.md) when changing digest presentation.
+
+## Guardrails
+
+- Keep hard filters separate from ranking; a score must never override a rejection.
+- Keep runtime-specific browser selectors and session behavior in the fetch adapter layer.
+- Treat `runs_per_day` as a scheduler hint, not proof that a schedule was installed.
+- Ask the user to authenticate through the host runtime; never request passwords, cookies, or tokens in chat.
+- Respect LinkedIn terms, applicable law, rate limits, and organizational policy. Stop rather than bypass access controls or anti-bot challenges.
+- If no adapter is available, validate or update the profile and clearly report that live collection was not run.
+- Prefer the adapter's optional `extract_job_card_metadata(card)` hook for `posted_at_text`, `is_reposted`, and `apply_click_count_text`; these values are displayed activity signals, not verified application totals.
