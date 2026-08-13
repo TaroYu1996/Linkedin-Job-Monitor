@@ -56,6 +56,8 @@ Import `scripts/config_schema.py` and `scripts/collect_profile.py` to build or u
   - `allowed_location_types`
 - Optional:
   - salary constraints
+  - optional detailed-JD inspection
+  - full-match-only or full-and-partial result output
   - seniority
   - title/JD keyword constraints
   - company allow/deny lists

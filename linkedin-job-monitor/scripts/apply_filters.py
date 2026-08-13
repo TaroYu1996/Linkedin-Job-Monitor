@@ -60,17 +60,18 @@ def apply_hard_filters(jobs: list[NormalizedJob], profile: dict) -> FilterResult
         if title_excludes and _contains_any(title, title_excludes):
             reasons.append("title_contains_excluded_keyword")
 
-        jd_includes = profile.get("jd_include_keywords", [])
-        if jd_includes and not _contains_any(jd, jd_includes):
-            reasons.append("jd_missing_include_keywords")
+        if profile.get("check_detailed_jd", True):
+            jd_includes = profile.get("jd_include_keywords", [])
+            if jd_includes and not _contains_any(jd, jd_includes):
+                reasons.append("jd_missing_include_keywords")
 
-        jd_must_have = profile.get("jd_must_have_keywords", [])
-        if jd_must_have and not _contains_all(jd, jd_must_have):
-            reasons.append("jd_missing_must_have_keywords")
+            jd_must_have = profile.get("jd_must_have_keywords", [])
+            if jd_must_have and not _contains_all(jd, jd_must_have):
+                reasons.append("jd_missing_must_have_keywords")
 
-        jd_excludes = profile.get("jd_exclude_keywords", [])
-        if jd_excludes and _contains_any(jd, jd_excludes):
-            reasons.append("jd_contains_excluded_keyword")
+            jd_excludes = profile.get("jd_exclude_keywords", [])
+            if jd_excludes and _contains_any(jd, jd_excludes):
+                reasons.append("jd_contains_excluded_keyword")
 
         whitelist = profile.get("company_whitelist", [])
         if whitelist and company not in whitelist:

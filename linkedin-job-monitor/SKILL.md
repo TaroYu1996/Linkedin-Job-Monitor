@@ -13,9 +13,12 @@ Run a LinkedIn job search as a deterministic pipeline. Keep credentials and brow
 2. If the profile is missing, read [setup-flow.md](references/setup-flow.md) and collect only the four required fields first. Use [first-time-conversation-template.md](references/first-time-conversation-template.md) only when a ready-made Chinese or English prompt is useful.
 3. If the user requests changes, merge only explicitly supplied fields with `merge_profile_update`; preserve all other values.
 4. Validate the resulting mapping with `validate_profile` before fetching or saving it. Read [filter-schema.md](references/filter-schema.md) when interpreting fields or explaining a rejection.
-5. Provide a runtime-owned authenticated session implementing `LinkedInSessionAdapter`, then call `run_monitor(profile, dedupe_state, session)`. The orchestrator performs fetch, normalize, hard-filter, deduplicate, score, and summarize in that order.
-6. Persist the returned dedupe state under the same user and search context. Never persist cookies, tokens, or credentials in the profile or dedupe state.
-7. Return the digest without inventing missing jobs, salary data, match reasons, or successful scheduling.
+5. Confirm the two result-shaping preferences when relevant:
+   - Set `check_detailed_jd` to `true` to fetch and evaluate detailed JD text, or `false` to skip JD extraction, JD filters, and JD scoring.
+   - Set `output_mode` to `matches_only` for fully qualified jobs only, or `include_partial_matches` to include clearly labeled partial matches and their mismatch reasons.
+6. Provide a runtime-owned authenticated session implementing `LinkedInSessionAdapter`, then call `run_monitor(profile, dedupe_state, session)`. The orchestrator performs fetch, normalize, hard-filter, deduplicate, score, and summarize in that order.
+7. Persist the returned dedupe state under the same user and search context. Never persist cookies, tokens, or credentials in the profile or dedupe state.
+8. Return the digest without inventing missing jobs, salary data, match reasons, or successful scheduling. Always rank full matches before partial matches.
 
 ## Use the scripts
 
