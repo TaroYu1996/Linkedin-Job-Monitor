@@ -4,7 +4,9 @@ All filtering and ranking should read from the profile object.
 
 ## Fields
 
-- `search_url` (str, required): authenticated LinkedIn jobs search URL.
+- `source_mode` (str): `linkedin|career_pages`; defaults to `linkedin` for backward compatibility.
+- `search_url` (str): authenticated LinkedIn jobs search URL; required only in LinkedIn mode.
+- `career_pages` (list[str|mapping]): public HTTPS career URLs; required only in career-page mode. A mapping may include `company` and `url`.
 - `target_roles` (list[str], required): role families used for ranking relevance.
 - `regions` (list[str], required): allowed geography labels.
 - `region_aliases` (dict[str, list[str]]): optional custom aliases for configured regions.
@@ -16,6 +18,8 @@ All filtering and ranking should read from the profile object.
 - `salary_hours_per_week` (int): hourly annualization assumption; defaults to `40`.
 - `salary_weeks_per_year` (int): hourly annualization assumption; defaults to `52`. Monthly salary uses `12` months.
 - `check_detailed_jd` (bool): fetch and evaluate detailed job-description text. When `false`, skip all `jd_*` filters and JD scoring. Defaults to `true`.
+- `prefilter_before_jd` (bool): skip JD fetching when card-visible region, location type, title, or company rules already prove rejection. Defaults to `true`.
+- `jd_refresh_days` (int): re-fetch an unchanged saved job after this many days; defaults to `7`. Use `0` to disable periodic refresh.
 - `output_mode` (str): `matches_only` returns only jobs that pass every enabled hard filter; `include_partial_matches` also returns rejected jobs, clearly labeled with their mismatch reasons. Defaults to `matches_only`.
 - `seniority` (list[str]): optional normalized bands. An empty list disables seniority filtering.
 - `title_include_keywords` (list[str]): at least one keyword recommended for title relevance.
@@ -41,4 +45,7 @@ All filtering and ranking should read from the profile object.
 - Disabling detailed JD checks does not disable title, company, location, salary, or seniority filters.
 - Empty include lists should not block matching by default.
 - Parse salary from the card first and detailed JD second. Compare filters against annualized CAD values while preserving the original period and source.
+- Batch-read result-card summaries and deduplicate by Job ID before opening details. Missing card salary or JD fields are not safe prefilter failures.
 - Use built-in Greater Toronto Area municipality aliases plus profile-defined aliases and fuzzy spelling comparison.
+- In career-page mode, `target_roles` is also a card-level hard filter. A phrase matches directly or when the same role words appear in another order.
+- Career-page profiles default to all work modes and `check_detailed_jd=false` when that setting is omitted.

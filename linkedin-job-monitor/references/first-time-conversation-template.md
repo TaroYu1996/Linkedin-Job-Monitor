@@ -1,193 +1,104 @@
 # First-Time Setup Conversation Template (CN + EN)
 
-Use this template when a user has no saved profile and wants to set up `linkedin-job-monitor` for the first time.
+## 中文引导
 
----
+### 开场：先检查已有任务
 
-## 中文版（首次配置）
+如果已有 task registry，先问：
 
-### 目标
-在一轮或多轮对话中，收集最小必填字段并确认可选偏好，最后得到可验证的 profile。
+> 你当前已有监控任务。需要我先按 `LinkedIn 搜索` 和 `单独配置的 Career 页面` 列出来，还是直接新增一个任务？
 
-### 机器人开场
-你好！我可以先帮你完成 **LinkedIn 职位监控** 的首次配置。  
-我会先收集 4 个必填项，然后再补充可选筛选条件，最后你就可以直接跑监控。
+用户问“目前有哪些模式/配置/任务”时，先区分“Skill 支持的模式”和“用户已配置的任务”。问法不明确时，先说明支持 LinkedIn/Career 两种来源，再读取 registry 并分组展示；不要触发抓取。
 
-必填项是：
-1. LinkedIn 搜索链接（search_url）
-2. 目标岗位（target_roles）
-3. 目标地区（regions）
-4. 办公模式（allowed_location_types：remote/hybrid/onsite）
+### 新建任务：选择来源
 
----
+你好，我可以帮你建立定期职位监控。请先选择一种模式：
 
-### 第 1 步：收集必填字段
+1. **LinkedIn 搜索**：适合跨公司搜索，支持薪资、JD、seniority、公司黑白名单等完整筛选；需要可用的 LinkedIn 登录会话。
+2. **指定公司 Career 页面**：适合持续刷新公司官网；内建支持 TD、CIBC、Scotiabank、BMO 和 RBC，默认只按目标职位和地区筛选。
 
-请你直接按下面格式回复（可以复制后填写）：
+请提供一个任务名称，并回复 `LinkedIn` 或 `公司 Career 页面`。
 
-- search_url:
-- target_roles: （可多个，用逗号分隔）
-- regions: （可多个，用逗号分隔）
-- allowed_location_types: （remote/hybrid/onsite，可多选）
+### 用户选择 LinkedIn
 
----
+请提供：
 
-### 第 2 步：收集可选字段（可跳过）
+- LinkedIn 搜索链接：
+- 任务名称：
+- 目标岗位（可多个）：
+- 目标地区（可多个）：
+- 办公模式（remote/hybrid/onsite，可多选）：
 
-为了让结果更精准，你还可以补充这些项（没有就写“跳过”）：
+收到最小配置后，再询问用户是否需要薪资、详细 JD、关键词、seniority、公司黑白名单或其他高级条件。不要一次展示所有高级字段。
 
-- minimum_salary_cad:
-- salary_required: （true/false）
-- salary_hours_per_week: （默认 40）
-- salary_weeks_per_year: （默认 52）
-- region_aliases: （可选，自定义地区及其城市/别名）
-- region_fuzzy_threshold: （默认 0.86）
-- unknown_region_policy: （reject/include）
-- check_detailed_jd: （是否检查详细 JD，true/false；默认 true）
-- output_mode: （仅完全符合：matches_only；包含部分符合：include_partial_matches）
-- seniority:
-- title_include_keywords:
-- title_exclude_keywords:
-- jd_include_keywords:
-- jd_must_have_keywords:
-- jd_exclude_keywords:
-- company_blacklist:
-- company_whitelist:
-- max_results_per_digest:
-- dedupe_window_days:
-- expire_after_missing_runs:
-- run_history_limit:
-- feedback_learning_enabled: （true/false）
-- feedback_score_weight: （0–5，默认 1）
-- runs_per_day:
+### 用户选择公司 Career 页面
 
----
+请只提供：
 
-### 第 3 步：确认与保存
+- 公司名称和 Career 页面链接（可多个）：
+- 任务名称：
+- 想监控的职位名称或 title 关键词（可多个）：
+- 目标地区（例如 Greater Toronto Area）：
 
-收到，我会：
-1. 规范化并校验配置
-2. 保存 profile
-3. 用该 profile 运行一次监控并返回简要 digest
+可直接复制：
 
-是否现在开始首次运行？（是/否）
+```text
+- task_name: BMO Risk
+- career_pages:
+  - BMO: https://jobs.bmo.com/ca/en/search-results
+- target_roles: risk analyst, risk manager, operational risk
+- regions: greater toronto area
+- jd_must_have_keywords: risk governance, controls
+- jd_exclude_keywords: internship
+```
 
----
+默认配置：所有办公模式均可、先不抓详细 JD、不要求薪资、不启用 seniority 筛选。保留地区模糊匹配、Job ID 去重、职位状态、反馈学习和运行漏斗。
 
-### 中文示例对话
+提示：可直接粘贴已带国家、工作类型或地区筛选的链接。Skill 会保留这些条件，但会用 `target_roles` 逐个刷新 title。BMO 的两种入口都支持；如同时配置，相同 Job ID 只会保留一份。
 
-**用户**：我要配置职位监控。  
-**机器人**：好的，我们先收集 4 个必填项……（发送第 1 步模板）  
-**用户**：
-- search_url: https://www.linkedin.com/jobs/search/?keywords=data%20analyst&location=Canada
-- target_roles: data analyst, business analyst
-- regions: canada, ontario
-- allowed_location_types: remote, hybrid
+任务拆分规则：
 
-**机器人**：收到。要不要补充可选筛选（薪资、关键词、公司黑白名单等）？  
-**用户**：
-- minimum_salary_cad: 85000
-- salary_required: false
-- title_include_keywords: analytics, sql
-- jd_include_keywords: dashboard, experimentation
-- max_results_per_digest: 10
-- dedupe_window_days: 14
-- runs_per_day: 2
-其余跳过。
+- 同一银行的多个 title 共享相同 JD 规则时，放在一个任务。
+- 不同银行使用不同 JD 规则时，每家银行建立独立任务。
+- 同一银行的两组 title 也有不同必须词/排除词时，拆成两个任务。
 
-**机器人**：已完成配置并保存。是否现在运行一次并返回简要摘要？
+只在用户主动需要时再问：
 
----
+- 是否抓详细 JD，用于薪资或 JD 关键词检查？
+- 每天刷新几次？
+- 是否限制 remote/hybrid/onsite？
 
-## English Version (First-Time Setup)
+### 保存确认
 
-### Goal
-Collect required profile fields first, then optional preferences, validate the profile, save it, and run the first monitor pass.
+总结任务 ID、来源模式、页面或搜索链接、所有目标 title、地区、JD 规则和刷新频率；校验并保存 registry。只有实际完成一次公开页面读取或认证 LinkedIn 读取后，才报告首次运行成功。
 
-### Assistant Opening
-Great — I can help you set up **LinkedIn Job Monitor** for first-time use.  
-I’ll collect 4 required fields first, then optional filters, and finally run your first digest.
+## English guide
 
-Required fields:
-1. LinkedIn search URL (`search_url`)
-2. Target role families (`target_roles`)
-3. Regions (`regions`)
-4. Allowed work modes (`allowed_location_types`: remote/hybrid/onsite)
+### Opening: choose a source
 
----
+If tasks already exist, first offer a grouped overview without running them. Otherwise, ask for a task name and choose one source:
 
-### Step 1: Collect Required Fields
+1. **LinkedIn search** for broader multi-company search and advanced salary, JD, seniority, and company filters; this requires an authenticated LinkedIn session.
+2. **Specific company career pages** for lightweight monitoring of employer sites, with built-in TD, CIBC, Scotiabank, BMO, and RBC support; this defaults to title and region matching only.
 
-Please reply using this format:
+Reply with `LinkedIn` or `company career pages`.
 
-- search_url:
-- target_roles: (comma-separated)
-- regions: (comma-separated)
-- allowed_location_types: (remote/hybrid/onsite, multi-select)
+### LinkedIn minimum fields
 
----
+- LinkedIn search URL
+- Target roles
+- Regions
+- Allowed work modes
 
-### Step 2: Collect Optional Fields (Skip if not needed)
+Offer advanced filters only after the minimum profile is collected.
 
-For better precision, you can optionally provide:
+### Career-page minimum fields
 
-- minimum_salary_cad:
-- salary_required: (true/false)
-- salary_hours_per_week: (default 40)
-- salary_weeks_per_year: (default 52)
-- region_aliases: (optional region-to-city/alias mapping)
-- region_fuzzy_threshold: (default 0.86)
-- unknown_region_policy: (`reject` or `include`)
-- check_detailed_jd: (inspect detailed JD text; true/false, default true)
-- output_mode: (`matches_only` or `include_partial_matches`)
-- seniority:
-- title_include_keywords:
-- title_exclude_keywords:
-- jd_include_keywords:
-- jd_must_have_keywords:
-- jd_exclude_keywords:
-- company_blacklist:
-- company_whitelist:
-- max_results_per_digest:
-- dedupe_window_days:
-- expire_after_missing_runs:
-- run_history_limit:
-- feedback_learning_enabled: (true/false)
-- feedback_score_weight: (0–5, default 1)
-- runs_per_day:
+- Company names and public career-page URLs
+- Task name
+- Target titles or role phrases
+- Regions
 
----
+Default to all work modes and `check_detailed_jd=false`. Keep fuzzy region matching, source-scoped Job ID dedupe, lifecycle state, feedback learning, and funnel statistics. Ask about JD checks, refresh frequency, or work-mode restrictions only when useful.
 
-### Step 3: Confirm and Save
-
-Thanks — I will now:
-1. Normalize and validate your profile
-2. Save the profile
-3. Run one monitor cycle and return a brief digest
-
-Start first run now? (yes/no)
-
----
-
-### English Example Conversation
-
-**User**: I want to set up job monitoring.  
-**Assistant**: Great — let’s collect 4 required fields first… (send Step 1 template)  
-**User**:
-- search_url: https://www.linkedin.com/jobs/search/?keywords=data%20analyst&location=Canada
-- target_roles: data analyst, business analyst
-- regions: canada, ontario
-- allowed_location_types: remote, hybrid
-
-**Assistant**: Got it. Do you want to add optional filters (salary, keywords, company lists, etc.)?  
-**User**:
-- minimum_salary_cad: 85000
-- salary_required: false
-- title_include_keywords: analytics, sql
-- jd_include_keywords: dashboard, experimentation
-- max_results_per_digest: 10
-- dedupe_window_days: 14
-- runs_per_day: 2
-skip the rest.
-
-**Assistant**: Setup is saved. Do you want me to run the monitor now and return a brief digest?
+Keep multiple titles in one task when they share JD rules. Create separate bank or title-group tasks when their must-have or exclude rules differ.

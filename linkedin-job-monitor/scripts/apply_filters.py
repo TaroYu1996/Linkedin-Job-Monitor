@@ -2,16 +2,78 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Iterable
 
 from normalize_jobs import NormalizedJob
 
 
+def _matches_target_role(title: str, target_roles: Iterable[str]) -> bool:
+    title_lower = title.lower()
+    title_tokens = set(re.findall(r"[a-z0-9]+", title_lower))
+    for role in target_roles:
+        role_lower = role.lower()
+        role_tokens = set(re.findall(r"[a-z0-9]+", role_lower))
+        if role_lower in title_lower or (role_tokens and role_tokens <= title_tokens):
+            return True
+    return False
+
+
 @dataclass
 class FilterResult:
     passed: list[NormalizedJob]
     rejected: list[tuple[NormalizedJob, list[str]]]
+
+
+def apply_card_prefilters(jobs: list[NormalizedJob], profile: dict) -> FilterResult:
+    """Apply only definitive card-level filters before any JD is opened.
+
+    Salary, JD keyword, and JD-derived seniority decisions remain in the full
+    filter because an empty card field is not evidence that the JD lacks it.
+    """
+    passed: list[NormalizedJob] = []
+    rejected: list[tuple[NormalizedJob, list[str]]] = []
+    allowed_regions = set(profile.get("regions", []))
+    allowed_location_types = set(profile.get("allowed_location_types", []))
+    title_includes = profile.get("title_include_keywords", [])
+    title_excludes = profile.get("title_exclude_keywords", [])
+    whitelist = set(profile.get("company_whitelist", []))
+    blacklist = set(profile.get("company_blacklist", []))
+    unknown_region_policy = profile.get("unknown_region_policy", "reject")
+    target_roles = profile.get("target_roles", [])
+
+    for job in jobs:
+        reasons: list[str] = []
+        title = job.title.lower()
+        company = job.company.lower()
+        if (
+            profile.get("source_mode") == "career_pages"
+            and target_roles
+            and not _matches_target_role(title, target_roles)
+        ):
+            reasons.append("target_role_mismatch")
+        if allowed_regions:
+            if job.normalized_region == "unknown":
+                if unknown_region_policy != "include":
+                    reasons.append("region_unknown")
+            elif job.normalized_region not in allowed_regions:
+                reasons.append("region_mismatch")
+        if allowed_location_types and job.location_type not in allowed_location_types:
+            reasons.append("location_type_mismatch")
+        if title_includes and not _contains_any(title, title_includes):
+            reasons.append("title_missing_include_keywords")
+        if title_excludes and _contains_any(title, title_excludes):
+            reasons.append("title_contains_excluded_keyword")
+        if whitelist and company not in whitelist:
+            reasons.append("company_not_whitelisted")
+        if blacklist and company in blacklist:
+            reasons.append("company_blacklisted")
+        if reasons:
+            rejected.append((job, reasons))
+        else:
+            passed.append(job)
+    return FilterResult(passed=passed, rejected=rejected)
 
 
 def _contains_any(text: str, needles: Iterable[str]) -> bool:
@@ -38,12 +100,20 @@ def apply_hard_filters(jobs: list[NormalizedJob], profile: dict) -> FilterResult
     whitelist = set(profile.get("company_whitelist", []))
     blacklist = set(profile.get("company_blacklist", []))
     unknown_region_policy = profile.get("unknown_region_policy", "reject")
+    target_roles = profile.get("target_roles", [])
 
     for job in jobs:
         reasons: list[str] = []
         title = job.title.lower()
         jd = job.jd_text.lower()
         company = job.company.lower()
+
+        if (
+            profile.get("source_mode") == "career_pages"
+            and target_roles
+            and not _matches_target_role(title, target_roles)
+        ):
+            reasons.append("target_role_mismatch")
 
         if allowed_regions:
             if job.normalized_region == "unknown":

@@ -2,11 +2,13 @@
 
 ## Keys
 
-1. Primary key: LinkedIn `job_id`.
+1. Primary key: LinkedIn Job ID, or career-site namespace plus requisition ID.
 2. Secondary key: canonical `job_url` without query or fragment.
 3. Fallback key: normalized `title|company|location` tuple.
 
 Migrate legacy URL keys to Job ID keys when the same observed job exposes both.
+
+Namespace company-career IDs by host and career-site name so two employers can safely reuse the same requisition value.
 
 ## State
 
@@ -18,6 +20,10 @@ Store per-key record with:
 - lifecycle status (`active|missing|expired`)
 - consecutive `missing_runs`
 - a compact job snapshot
+- stable result-card fingerprint and last JD fetch time
+- filter-profile fingerprint used for the last JD evaluation
+
+The card fingerprint excludes relative posting age and the full JD. Unchanged jobs reuse compact derived fields; `jd_refresh_days` periodically rechecks details that may have changed without a visible card change.
 
 ## Classification
 

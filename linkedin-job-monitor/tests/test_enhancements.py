@@ -96,6 +96,37 @@ class FastPathSession(StaticSession):
         return super().extract_visible_text(selector)
 
 
+class BatchSummarySession:
+    def __init__(self, summaries: list[dict] | None = None) -> None:
+        self.summaries = summaries or [
+            {
+                "title": "Digital Marketing Manager",
+                "company": "Example Co",
+                "location_text": "Toronto, Ontario, Canada",
+                "work_mode_text": "Hybrid",
+                "posted_at_text": "1 day ago",
+                "job_url": "https://www.linkedin.com/jobs/view/123?trk=search",
+                "job_id": "123",
+                "card_ref": "123",
+            }
+        ]
+        self.summary_calls = 0
+        self.details_calls = 0
+
+    def goto(self, url: str) -> None:
+        pass
+
+    def collect_job_summaries(self, max_cards: int) -> list[dict]:
+        self.summary_calls += 1
+        return self.summaries[:max_cards]
+
+    def extract_job_details(self, card: object, check_detailed_jd: bool) -> dict:
+        self.details_calls += 1
+        return {
+            "jd_text": "Salary range: $40-$50 per hour. Lead paid media strategy."
+        }
+
+
 class EnhancementTest(unittest.TestCase):
     def test_required_profile_lists_cannot_be_empty(self) -> None:
         with self.assertRaises(ProfileValidationError):
@@ -226,6 +257,115 @@ class EnhancementTest(unittest.TestCase):
         self.assertEqual(result.stats.jobs_parsed, 1)
         self.assertEqual(session.details_calls, 1)
         self.assertEqual(session.selector_calls, 0)
+
+    def test_batch_path_dedupes_before_fetching_jd_and_reuses_cache(self) -> None:
+        duplicate = dict(BatchSummarySession().summaries[0])
+        first_session = BatchSummarySession([BatchSummarySession().summaries[0], duplicate])
+        _, state = run_monitor(profile(), {}, first_session)
+
+        self.assertEqual(first_session.summary_calls, 1)
+        self.assertEqual(first_session.details_calls, 1)
+        self.assertEqual(state["last_run_stats"]["duplicate_cards_skipped"], 1)
+        self.assertEqual(state["last_run_stats"]["detail_fetch_succeeded"], 1)
+
+        second_session = BatchSummarySession()
+        digest, state = run_monitor(profile(), state, second_session)
+
+        self.assertEqual(second_session.details_calls, 0)
+        self.assertEqual(state["last_run_stats"]["detail_fetch_skipped"], 1)
+        self.assertEqual(
+            state["last_run_stats"]["detail_plan_reasons"],
+            {"skip:seen_unchanged": 1},
+        )
+        self.assertIn("shown=0", digest)
+        self.assertEqual(
+            state["records"]["jobid::123"]["snapshot"]["salary_min_cad"],
+            83200,
+        )
+
+    def test_batch_path_refreshes_only_a_changed_card(self) -> None:
+        summaries = [
+            BatchSummarySession().summaries[0],
+            {
+                **BatchSummarySession().summaries[0],
+                "company": "Second Co",
+                "job_url": "https://www.linkedin.com/jobs/view/456",
+                "job_id": "456",
+                "card_ref": "456",
+            },
+        ]
+        _, state = run_monitor(profile(), {}, BatchSummarySession(summaries))
+        changed = [{**summaries[0], "salary_text": "$90,000 per year"}, summaries[1]]
+        session = BatchSummarySession(changed)
+
+        _, state = run_monitor(profile(), state, session)
+
+        self.assertEqual(session.details_calls, 1)
+        self.assertEqual(
+            state["last_run_stats"]["detail_plan_reasons"],
+            {"fetch:card_changed": 1, "skip:seen_unchanged": 1},
+        )
+
+    def test_batch_path_refetches_when_profile_or_refresh_window_changes(self) -> None:
+        _, state = run_monitor(profile(), {}, BatchSummarySession())
+        changed_profile_session = BatchSummarySession()
+        _, state = run_monitor(
+            profile(jd_include_keywords=["strategy"]),
+            state,
+            changed_profile_session,
+        )
+        self.assertEqual(changed_profile_session.details_calls, 1)
+        self.assertEqual(
+            state["last_run_stats"]["detail_plan_reasons"],
+            {"fetch:profile_changed": 1},
+        )
+
+        state["records"]["jobid::123"]["last_jd_fetched_at"] = "2000-01-01T00:00:00+00:00"
+        refresh_session = BatchSummarySession()
+        _, state = run_monitor(profile(jd_include_keywords=["strategy"]), state, refresh_session)
+        self.assertEqual(refresh_session.details_calls, 1)
+        self.assertEqual(
+            state["last_run_stats"]["detail_plan_reasons"],
+            {"fetch:refresh_due": 1},
+        )
+
+    def test_card_prefilter_skips_jd_for_a_definitive_rejection(self) -> None:
+        session = BatchSummarySession(
+            [{**BatchSummarySession().summaries[0], "title": "Account Executive"}]
+        )
+        digest, state = run_monitor(
+            profile(title_include_keywords=["marketing"]),
+            {},
+            session,
+        )
+
+        self.assertEqual(session.details_calls, 0)
+        self.assertEqual(state["last_run_stats"]["prefilter_rejected"], 1)
+        self.assertEqual(
+            state["last_run_stats"]["detail_plan_reasons"],
+            {"skip:card_rejected": 1},
+        )
+        self.assertIn("shown=0", digest)
+
+    def test_hundred_seen_cards_require_zero_repeat_jd_calls(self) -> None:
+        summaries = [
+            {
+                **BatchSummarySession().summaries[0],
+                "job_url": f"https://www.linkedin.com/jobs/view/{index}",
+                "job_id": str(index),
+                "card_ref": str(index),
+            }
+            for index in range(1000, 1100)
+        ]
+        first_session = BatchSummarySession(summaries)
+        _, state = run_monitor(profile(), {}, first_session)
+        second_session = BatchSummarySession(summaries)
+        _, state = run_monitor(profile(), state, second_session)
+
+        self.assertEqual(first_session.details_calls, 100)
+        self.assertEqual(second_session.details_calls, 0)
+        self.assertEqual(state["last_run_stats"]["detail_fetch_skipped"], 100)
+        self.assertEqual(state["last_run_stats"]["dedupe_checked"], 100)
 
     def test_parse_failure_does_not_advance_missing_lifecycle(self) -> None:
         _, state = run_monitor(profile(), {}, StaticSession())

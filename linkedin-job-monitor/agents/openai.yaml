@@ -1,4 +1,4 @@
 interface:
   display_name: "LinkedIn Job Monitor"
-  short_description: "Monitor, learn from, and track LinkedIn jobs"
-  default_prompt: "Use $linkedin-job-monitor to run my saved profile and return a concise digest with job statuses and funnel statistics."
+  short_description: "Manage LinkedIn and bank job tasks"
+  default_prompt: "Use $linkedin-job-monitor to list, configure, or run my separate LinkedIn and bank career-page tasks with their own titles and JD rules."

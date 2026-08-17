@@ -40,11 +40,13 @@ def summarize_matches(
     max_items: int,
     matched_count: int | None = None,
     run_stats: dict[str, Any] | None = None,
+    source_mode: str = "linkedin",
 ) -> str:
     shown = scored_jobs[:max_items]
     matched = len(scored_jobs) if matched_count is None else matched_count
+    source_label = "Career-page" if source_mode == "career_pages" else "LinkedIn"
     lines: list[str] = [
-        f"LinkedIn monitor digest: fetched={fetched_count}, matched={matched}, shown={len(shown)}, filtered_out={rejected_count}"
+        f"{source_label} monitor digest: fetched={fetched_count}, matched={matched}, shown={len(shown)}, filtered_out={rejected_count}"
     ]
     if run_stats:
         lines.append(
@@ -52,11 +54,30 @@ def summarize_matches(
             f"cards={run_stats.get('cards_collected', 0)}, "
             f"attempted={run_stats.get('cards_attempted', 0)}, "
             f"parsed={run_stats.get('jobs_parsed', 0)}, "
+            f"duplicates={run_stats.get('duplicate_cards_skipped', 0)}, "
+            f"jd_fetched={run_stats.get('detail_fetch_succeeded', 0)}, "
+            f"jd_skipped={run_stats.get('detail_fetch_skipped', 0)}, "
             f"parse_failed={run_stats.get('parse_failed', 0)}, "
             f"fetch_errors={run_stats.get('fetch_errors', 0)}, "
             f"notified={run_stats.get('notified', 0)}, "
             f"duration_ms={run_stats.get('duration_ms', 0)}"
         )
+        if source_mode == "career_pages":
+            lines.append(
+                "Career pages: "
+                f"configured={run_stats.get('pages_configured', 0)}, "
+                f"succeeded={run_stats.get('pages_succeeded', 0)}, "
+                f"failed={run_stats.get('pages_failed', 0)}"
+            )
+            page_errors = run_stats.get("page_errors", {})
+            if page_errors:
+                lines.append(
+                    "Career page errors: "
+                    + ", ".join(
+                        f"{url} ({message})"
+                        for url, message in list(page_errors.items())[:3]
+                    )
+                )
         rejection_reasons = run_stats.get("rejection_reasons", {})
         if rejection_reasons:
             reason_text = ", ".join(
@@ -77,11 +98,14 @@ def summarize_matches(
             [
                 f"{idx}. [{match_label}] {job.title} — {job.company}",
                 f"   {job.location_text} | {job.location_type} | {_salary_line(scored)}",
-                f"   {_activity_line(scored)}",
                 f"   Why matched: {reason} | score={scored.score} | status={scored.dedupe_status} | lifecycle={scored.lifecycle_status}{user_status}",
                 f"   Link: {job.job_url}",
             ]
         )
+        if source_mode == "linkedin":
+            lines.insert(-2, f"   {_activity_line(scored)}")
+        elif job.posted_at_text:
+            lines.insert(-2, f"   {job.posted_at_text}")
         if scored.mismatch_reasons:
             lines.append(f"   Missing or mismatched: {', '.join(scored.mismatch_reasons)}")
 

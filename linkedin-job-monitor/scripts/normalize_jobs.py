@@ -37,6 +37,8 @@ class NormalizedJob:
     region_match_score: float = 0.0
     region_match_method: str | None = None
     salary_source: str | None = None
+    source_namespace: str | None = None
+    source_mode: str = "linkedin"
 
 
 @dataclass(frozen=True)
@@ -336,11 +338,14 @@ def normalize_jobs(
         location_type = _derive_location_type(raw)
         fallback_id = _build_fallback_id(title, company, location_text)
         linkedin_job_id = _linkedin_job_id(raw)
+        job_key = linkedin_job_id or fallback_id
+        if raw.source_mode == "career_pages" and raw.source_namespace:
+            job_key = f"{raw.source_namespace.lower()}::{job_key}"
         is_reposted, apply_click_count, count_is_lower_bound = _parse_card_activity(raw)
 
         normalized.append(
             NormalizedJob(
-                job_key=linkedin_job_id or fallback_id,
+                job_key=job_key,
                 linkedin_job_id=linkedin_job_id,
                 job_url=raw.job_url.strip(),
                 title=title,
@@ -361,6 +366,8 @@ def normalize_jobs(
                 region_match_score=region_score,
                 region_match_method=region_method,
                 salary_source=salary_source,
+                source_namespace=raw.source_namespace,
+                source_mode=raw.source_mode,
             )
         )
 

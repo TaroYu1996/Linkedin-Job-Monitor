@@ -31,4 +31,8 @@ Each successful `run_monitor` call stores:
 - `last_run_stats`: the latest run.
 - `run_history`: recent runs, capped by `run_history_limit`.
 
-Statistics include collected and attempted cards, parsed jobs, parse failures, fetch errors, normalized jobs, matched/rejected jobs, rejection-reason counts, dedupe-status counts, notification count, shown count, newly expired count, lifecycle totals, and duration.
+Statistics include collected and attempted cards, parsed jobs, same-run duplicates, prefilter rejections, detail-fetch plan reasons, fetched/skipped/failed JDs, summary/detail stage durations, parse failures, fetch errors, normalized jobs, matched/rejected jobs, rejection-reason counts, dedupe-status counts, notification count, shown count, newly expired count, lifecycle totals, and total duration.
+
+Career-page runs additionally record configured, succeeded, and failed page totals plus `page_errors`. A partial multi-page failure makes the collection incomplete, so absent jobs do not advance to missing or expired.
+
+The compact per-job snapshot caches annualized salary, salary source/period, seniority hint, last classification, rejection reasons, card fingerprint, last JD fetch time, and the filter-profile fingerprint used for that JD. It intentionally does not persist the full JD text.
